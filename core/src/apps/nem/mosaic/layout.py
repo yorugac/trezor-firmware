@@ -1,5 +1,6 @@
-from trezor import ui, wire
+from trezor import ui
 from trezor.messages import (
+    ButtonRequestType,
     NEMMosaicCreation,
     NEMMosaicDefinition,
     NEMMosaicLevy,
@@ -7,7 +8,6 @@ from trezor.messages import (
     NEMSupplyChangeType,
     NEMTransactionCommon,
 )
-from trezor.ui.confirm import CONFIRMED, Confirm
 from trezor.ui.scroll import Paginated
 from trezor.ui.text import Text
 
@@ -18,10 +18,7 @@ from ..layout import (
     require_confirm_text,
 )
 
-from apps.common.layout import split_address
-
-if __debug__:
-    from apps.debug import confirm_signal
+from apps.common.layout import require_confirm, split_address
 
 
 async def ask_mosaic_creation(
@@ -76,20 +73,6 @@ def _supply_message(supply_change):
 
 
 async def _require_confirm_properties(ctx, definition: NEMMosaicDefinition):
-    # TODO: we should send a button request here
-    pages = _get_mosaic_properties(definition)
-    pages[-1] = Confirm(pages[-1])
-    paginated = Paginated(pages)
-
-    if __debug__:
-        result = await ctx.wait(paginated, confirm_signal)
-    else:
-        result = await ctx.wait(paginated)
-    if result is not CONFIRMED:
-        raise wire.ActionCancelled("Action cancelled")
-
-
-def _get_mosaic_properties(definition: NEMMosaicDefinition):
     properties = []
 
     # description
@@ -156,4 +139,5 @@ def _get_mosaic_properties(definition: NEMMosaicDefinition):
         t.normal(levy_type)
         properties.append(t)
 
-    return properties
+    pages = Paginated(properties)
+    return await require_confirm(ctx, pages, ButtonRequestType.ConfirmOutput)
