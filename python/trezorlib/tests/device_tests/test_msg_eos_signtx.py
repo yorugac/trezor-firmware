@@ -14,7 +14,6 @@
 # You should have received a copy of the License along with this library.
 # If not, see <https://www.gnu.org/licenses/lgpl-3.0.html>.
 
-import time
 
 import pytest
 
@@ -40,7 +39,6 @@ class TestMsgEosSignTx(TrezorTest):
         yield
         for _ in range(pages - 1):
             self.client.debug.swipe_down()
-            time.sleep(1)
 
         # confirm last page
         self.client.debug.press_yes()
@@ -670,7 +668,6 @@ class TestMsgEosSignTx(TrezorTest):
             yield
             for _ in range(5):
                 self.client.debug.swipe_down()
-                time.sleep(1)
 
             # confirm new account
             self.client.debug.press_yes()
@@ -678,7 +675,6 @@ class TestMsgEosSignTx(TrezorTest):
             # swipe through buyrambytes
             yield
             self.client.debug.swipe_down()
-            time.sleep(1)
 
             # confirm buyrambytes
             self.client.debug.press_yes()
@@ -687,7 +683,6 @@ class TestMsgEosSignTx(TrezorTest):
             yield
             for _ in range(2):
                 self.client.debug.swipe_down()
-                time.sleep(1)
 
             # confirm delegatebw
             self.client.debug.press_yes()
@@ -741,7 +736,6 @@ class TestMsgEosSignTx(TrezorTest):
             # swipe through setcode
             yield
             self.client.debug.swipe_down()
-            time.sleep(1)
 
             # confirm setcode
             self.client.debug.press_yes()
@@ -749,7 +743,6 @@ class TestMsgEosSignTx(TrezorTest):
             # swipe through setabi
             yield
             self.client.debug.swipe_down()
-            time.sleep(1)
 
             # confirm setabi
             self.client.debug.press_yes()
