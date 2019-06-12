@@ -29,23 +29,21 @@ TREZOR_VERSION = None
 
 def get_device():
     path = os.environ.get("TREZOR_PATH")
+    env_interactive = int(os.environ.get("INTERACT", 0))
     if path:
         transport = get_transport(path)
-    else:
-        devices = enumerate_devices()
-        for device in devices:
-            if hasattr(device, "find_debug"):
-                transport = device
-                break
-        else:
-            raise RuntimeError("No debuggable device found")
-    env_interactive = int(os.environ.get("INTERACT", 0))
-    try:
-        return TrezorClientDebugLink(transport, auto_interact=not env_interactive)
-    except Exception as e:
-        raise RuntimeError(
-            "Failed to open debuglink for {}".format(transport.get_path())
-        ) from e
+        try:
+            return TrezorClientDebugLink(transport, auto_interact=not env_interactive)
+        except Exception as e:
+            raise RuntimeError("Failed to open debuglink") from e
+
+    devices = enumerate_devices()
+    for device in devices:
+        try:
+            return TrezorClientDebugLink(device, auto_interact=not env_interactive)
+        except Exception:
+            pass
+    raise RuntimeError("No debuggable device found")
 
 
 def device_version():
