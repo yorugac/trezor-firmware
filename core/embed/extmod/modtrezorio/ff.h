@@ -63,66 +63,28 @@ typedef unsigned short  WCHAR;  /* 16-bit unsigned integer */
 typedef unsigned long   DWORD;  /* 32-bit unsigned integer */
 #endif
 
-
-/* Definitions of volume management */
-
-#if FF_STR_VOLUME_ID
-#ifndef FF_VOLUME_STRS
-extern const char* VolumeStr[FF_VOLUMES];   /* User defied volume ID */
-#endif
-#endif
-
-
-
 /* Type of path name strings on FatFs API */
 
 #ifndef _INC_TCHAR
 #define _INC_TCHAR
 
-#if FF_USE_LFN && FF_LFN_UNICODE == 1   /* Unicode in UTF-16 encoding */
-typedef WCHAR TCHAR;
-#define _T(x) L ## x
-#define _TEXT(x) L ## x
-#elif FF_USE_LFN && FF_LFN_UNICODE == 2 /* Unicode in UTF-8 encoding */
+/* Unicode in UTF-8 encoding */
 typedef char TCHAR;
 #define _T(x) u8 ## x
 #define _TEXT(x) u8 ## x
-#elif FF_USE_LFN && FF_LFN_UNICODE == 3 /* Unicode in UTF-32 encoding */
-typedef DWORD TCHAR;
-#define _T(x) U ## x
-#define _TEXT(x) U ## x
-#elif FF_USE_LFN && (FF_LFN_UNICODE < 0 || FF_LFN_UNICODE > 3)
-#error Wrong FF_LFN_UNICODE setting
-#else                                   /* ANSI/OEM code in SBCS/DBCS */
-typedef char TCHAR;
-#define _T(x) x
-#define _TEXT(x) x
-#endif
 
 #endif
-
 
 
 /* Type of file size variables */
 
-#if FF_FS_EXFAT
-#if FF_INTDEF != 2
-#error exFAT feature wants C99 or later
-#endif
-typedef QWORD FSIZE_t;
-#else
 typedef DWORD FSIZE_t;
-#endif
-
 
 
 /* Filesystem object structure (FATFS) */
 
 typedef struct {
     void    *drv;           // block device underlying this filesystem
-#if FF_MULTI_PARTITION      /* Multiple partition configuration */
-    BYTE    part;           // Partition: 0:Auto detect, 1-4:Forced partition
-#endif
     BYTE    fs_type;        /* Filesystem type (0:not mounted) */
     BYTE    n_fats;         /* Number of FATs (1 or 2) */
     BYTE    wflag;          /* win[] flag (b0:dirty) */
@@ -136,23 +98,9 @@ typedef struct {
 #if FF_USE_LFN
     WCHAR*  lfnbuf;         /* LFN working buffer */
 #endif
-#if FF_FS_EXFAT
-    BYTE*   dirbuf;         /* Directory entry block scratchpad buffer for exFAT */
-#endif
-#if FF_FS_REENTRANT
-    FF_SYNC_t   sobj;       /* Identifier of sync object */
-#endif
 #if !FF_FS_READONLY
     DWORD   last_clst;      /* Last allocated cluster */
     DWORD   free_clst;      /* Number of free clusters */
-#endif
-#if FF_FS_RPATH
-    DWORD   cdir;           /* Current directory start cluster (0:root) */
-#if FF_FS_EXFAT
-    DWORD   cdc_scl;        /* Containing directory start cluster (invalid when cdir is 0) */
-    DWORD   cdc_size;       /* b31-b8:Size of containing directory, b7-b0: Chain status */
-    DWORD   cdc_ofs;        /* Offset in the containing directory (invalid when cdir is 0) */
-#endif
 #endif
     DWORD   n_fatent;       /* Number of FAT entries (number of clusters + 2) */
     DWORD   fsize;          /* Size of an FAT [sectors] */
@@ -160,9 +108,6 @@ typedef struct {
     DWORD   fatbase;        /* FAT base sector */
     DWORD   dirbase;        /* Root directory base sector/cluster */
     DWORD   database;       /* Data base sector */
-#if FF_FS_EXFAT
-    DWORD   bitbase;        /* Allocation bitmap base sector */
-#endif
     DWORD   winsect;        /* Current sector appearing in the win[] */
     BYTE    win[FF_MAX_SS]; /* Disk access window for Directory, FAT (and file data at tiny cfg) */
 } FATFS;
@@ -178,16 +123,6 @@ typedef struct {
     BYTE    stat;           /* Object chain status (b1-0: =0:not contiguous, =2:contiguous, =3:fragmented in this session, b2:sub-directory stretched) */
     DWORD   sclust;         /* Object data start cluster (0:no cluster or root directory) */
     FSIZE_t objsize;        /* Object size (valid when sclust != 0) */
-#if FF_FS_EXFAT
-    DWORD   n_cont;         /* Size of first fragment - 1 (valid when stat == 3) */
-    DWORD   n_frag;         /* Size of last fragment needs to be written to FAT (valid when not zero) */
-    DWORD   c_scl;          /* Containing directory start cluster (valid when sclust != 0) */
-    DWORD   c_size;         /* b31-b8:Size of containing directory, b7-b0: Chain status (valid when c_scl != 0) */
-    DWORD   c_ofs;          /* Offset in the containing directory (valid when file object and sclust != 0) */
-#endif
-#if FF_FS_LOCK
-    UINT    lockid;         /* File lock ID origin from 1 (index of file semaphore table Files[]) */
-#endif
 } FFOBJID;
 
 
@@ -204,9 +139,6 @@ typedef struct {
 #if !FF_FS_READONLY
     DWORD   dir_sect;       /* Sector number containing the directory entry (not used at exFAT) */
     BYTE*   dir_ptr;        /* Pointer to the directory entry in the win[] (not used at exFAT) */
-#endif
-#if FF_USE_FASTSEEK
-    DWORD*  cltbl;          /* Pointer to the cluster link map table (nulled on open, set by application) */
 #endif
 #if !FF_FS_TINY
     BYTE    buf[FF_MAX_SS]; /* File private data read/write window */
@@ -226,9 +158,6 @@ typedef struct {
     BYTE    fn[12];         /* SFN (in/out) {body[8],ext[3],status[1]} */
 #if FF_USE_LFN
     DWORD   blk_ofs;        /* Offset of current entry block being processed (0xFFFFFFFF:Invalid) */
-#endif
-#if FF_USE_FIND
-    const TCHAR* pat;       /* Pointer to the name matching pattern */
 #endif
 } FF_DIR;
 
@@ -338,25 +267,9 @@ DWORD get_fattime (void);
 #endif
 
 /* LFN support functions */
-#if FF_USE_LFN >= 1                     /* Code conversion (defined in unicode.c) */
 WCHAR ff_oem2uni (WCHAR oem, WORD cp);  /* OEM code to Unicode conversion */
 WCHAR ff_uni2oem (DWORD uni, WORD cp);  /* Unicode to OEM code conversion */
 DWORD ff_wtoupper (DWORD uni);          /* Unicode upper-case conversion */
-#endif
-#if FF_USE_LFN == 3                     /* Dynamic memory allocation */
-void* ff_memalloc (UINT msize);         /* Allocate memory block */
-void ff_memfree (void* mblock);         /* Free memory block */
-#endif
-
-/* Sync functions */
-#if FF_FS_REENTRANT
-int ff_cre_syncobj (FATFS *fatfs, FF_SYNC_t* sobj); /* Create a sync object */
-int ff_req_grant (FF_SYNC_t sobj);      /* Lock sync object */
-void ff_rel_grant (FF_SYNC_t sobj);     /* Unlock sync object */
-int ff_del_syncobj (FF_SYNC_t sobj);    /* Delete a sync object */
-#endif
-
-
 
 
 /*--------------------------------------------------------------*/
