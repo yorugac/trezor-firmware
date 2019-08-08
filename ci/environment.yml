@@ -4,6 +4,7 @@ environment:
   variables:
     GIT_SUBMODULE_STRATEGY: none  # no need to fetch submodules
     CONTAINER_NAME: "$CI_REGISTRY/satoshilabs/trezor/trezor-firmware/environment"
+    DOCKER_HOST: tcp://docker:2375
   before_script:
     - docker login $CI_REGISTRY -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD
   only:
